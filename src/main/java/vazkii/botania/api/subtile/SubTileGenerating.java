@@ -43,6 +43,7 @@ public class SubTileGenerating extends SubTileEntity {
 	private static final String TAG_COLLECTOR_X = "collectorX";
 	private static final String TAG_COLLECTOR_Y = "collectorY";
 	private static final String TAG_COLLECTOR_Z = "collectorZ";
+	private static final String TAG_HAS_COLLECTOR = "hasCollector";
 	private static final String TAG_PASSIVE_DECAY_TICKS = "passiveDecayTicks";
 
 	protected int mana;
@@ -117,7 +118,9 @@ public class SubTileGenerating extends SubTileEntity {
 
 			if(cachedCollectorCoordinates != null) {
 				needsNew = false;
-				if(supertile.getWorldObj().blockExists(cachedCollectorCoordinates.posX, cachedCollectorCoordinates.posY, cachedCollectorCoordinates.posZ)) {
+				ChunkCoordinates coords = cachedCollectorCoordinates;
+				// blockExists can include saved but unloaded cubes; wait until the target is loaded.
+				if(supertile.getWorldObj().checkChunksExist(coords.posX, coords.posY, coords.posZ, coords.posX, coords.posY, coords.posZ)) {
 					needsNew = true;
 					TileEntity tileAt = supertile.getWorldObj().getTileEntity(cachedCollectorCoordinates.posX, cachedCollectorCoordinates.posY, cachedCollectorCoordinates.posZ);
 					if(tileAt != null && tileAt instanceof IManaCollector && !tileAt.isInvalid()) {
@@ -146,6 +149,7 @@ public class SubTileGenerating extends SubTileEntity {
 
 	public void linkToForcefully(TileEntity collector) {
 		linkedCollector = collector;
+		cachedCollectorCoordinates = null;
 	}
 
 	public void addMana(int mana) {
@@ -242,7 +246,10 @@ public class SubTileGenerating extends SubTileEntity {
 		int y = cmp.getInteger(TAG_COLLECTOR_Y);
 		int z = cmp.getInteger(TAG_COLLECTOR_Z);
 
-		cachedCollectorCoordinates = y < 0 ? null : new ChunkCoordinates(x, y, z);
+		// Old saves use a negative Y for an unbound flower; new saves store presence separately.
+		boolean hasCollector = cmp.hasKey(TAG_HAS_COLLECTOR) ? cmp.getBoolean(TAG_HAS_COLLECTOR) : y >= 0;
+		cachedCollectorCoordinates = hasCollector ? new ChunkCoordinates(x, y, z) : null;
+		linkedCollector = null;
 	}
 
 	@Override
@@ -250,6 +257,7 @@ public class SubTileGenerating extends SubTileEntity {
 		cmp.setInteger(TAG_MANA, mana);
 		cmp.setInteger(TAG_TICKS_EXISTED, ticksExisted);
 		cmp.setInteger(TAG_PASSIVE_DECAY_TICKS, passiveDecayTicks);
+		cmp.setBoolean(TAG_HAS_COLLECTOR, cachedCollectorCoordinates != null || linkedCollector != null);
 
 		if(cachedCollectorCoordinates != null) {
 			cmp.setInteger(TAG_COLLECTOR_X, cachedCollectorCoordinates.posX);
@@ -287,7 +295,7 @@ public class SubTileGenerating extends SubTileEntity {
 		if(range >= dist) {
 			TileEntity tile = player.worldObj.getTileEntity(x, y, z);
 			if(tile instanceof IManaCollector) {
-				linkedCollector = tile;
+				linkToForcefully(tile);
 				return true;
 			}
 		}

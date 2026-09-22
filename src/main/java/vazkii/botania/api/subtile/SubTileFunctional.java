@@ -37,6 +37,7 @@ public class SubTileFunctional extends SubTileEntity {
 	private static final String TAG_POOL_X = "poolX";
 	private static final String TAG_POOL_Y = "poolY";
 	private static final String TAG_POOL_Z = "poolZ";
+	private static final String TAG_HAS_POOL = "hasPool";
 
 	public int mana;
 
@@ -93,7 +94,9 @@ public class SubTileFunctional extends SubTileEntity {
 
 			if(cachedPoolCoordinates != null) {
 				needsNew = false;
-				if(supertile.getWorldObj().blockExists(cachedPoolCoordinates.posX, cachedPoolCoordinates.posY, cachedPoolCoordinates.posZ)) {
+				ChunkCoordinates coords = cachedPoolCoordinates;
+				// blockExists can include saved but unloaded cubes; wait until the target is loaded.
+				if(supertile.getWorldObj().checkChunksExist(coords.posX, coords.posY, coords.posZ, coords.posX, coords.posY, coords.posZ)) {
 					needsNew = true;
 					TileEntity tileAt = supertile.getWorldObj().getTileEntity(cachedPoolCoordinates.posX, cachedPoolCoordinates.posY, cachedPoolCoordinates.posZ);
 					if(tileAt != null && tileAt instanceof IManaPool && !tileAt.isInvalid()) {
@@ -122,6 +125,7 @@ public class SubTileFunctional extends SubTileEntity {
 
 	public void linkToForcefully(TileEntity pool) {
 		linkedPool = pool;
+		cachedPoolCoordinates = null;
 	}
 
 	public void addMana(int mana) {
@@ -155,12 +159,16 @@ public class SubTileFunctional extends SubTileEntity {
 		int y = cmp.getInteger(TAG_POOL_Y);
 		int z = cmp.getInteger(TAG_POOL_Z);
 
-		cachedPoolCoordinates = y < 0 ? null : new ChunkCoordinates(x, y, z);
+		// Old saves use a negative Y for an unbound flower; new saves store presence separately.
+		boolean hasPool = cmp.hasKey(TAG_HAS_POOL) ? cmp.getBoolean(TAG_HAS_POOL) : y >= 0;
+		cachedPoolCoordinates = hasPool ? new ChunkCoordinates(x, y, z) : null;
+		linkedPool = null;
 	}
 
 	@Override
 	public void writeToPacketNBT(NBTTagCompound cmp) {
 		cmp.setInteger(TAG_MANA, mana);
+		cmp.setBoolean(TAG_HAS_POOL, cachedPoolCoordinates != null || linkedPool != null);
 
 		if(cachedPoolCoordinates != null) {
 			cmp.setInteger(TAG_POOL_X, cachedPoolCoordinates.posX);
@@ -198,7 +206,7 @@ public class SubTileFunctional extends SubTileEntity {
 		if(range >= dist) {
 			TileEntity tile = player.worldObj.getTileEntity(x, y, z);
 			if(tile instanceof IManaPool) {
-				linkedPool = tile;
+				linkToForcefully(tile);
 				return true;
 			}
 		}

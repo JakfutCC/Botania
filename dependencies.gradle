@@ -1,6 +1,7 @@
 // Add your dependencies here
 
 dependencies {
+    testImplementation('junit:junit:4.13.2')
     api('com.github.GTNewHorizons:Baubles-Expanded:2.2.21-GTNH:dev')
     implementation('com.github.GTNewHorizons:GTNHLib:0.11.35:dev')
 
@@ -16,4 +17,3 @@ dependencies {
 
     compileOnly("com.github.GTNewHorizons:StructureLib:1.4.42:dev")
 }
-
