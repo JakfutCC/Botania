@@ -26,6 +26,7 @@ import vazkii.botania.api.internal.IManaBurst;
 import vazkii.botania.api.mana.IManaBlock;
 import vazkii.botania.common.block.ModBlocks;
 import vazkii.botania.common.core.handler.ConfigHandler;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.item.ModItems;
 
 public class LensMine extends Lens {
@@ -53,7 +54,7 @@ public class LensMine extends Lens {
 		int mana = burst.getMana();
 
 		ChunkCoordinates coords = burst.getBurstSourceChunkCoordinates();
-		if((coords.posX != x || coords.posY != y || coords.posZ != z) && !(tile instanceof IManaBlock) && neededHarvestLevel <= harvestLevel && hardness != -1 && hardness < 50F && (burst.isFake() || mana >= 24)) {
+		if((!burst.hasBurstSource() || coords.posX != x || coords.posY != y || coords.posZ != z) && !(tile instanceof IManaBlock) && neededHarvestLevel <= harvestLevel && hardness != -1 && hardness < 50F && (burst.isFake() || mana >= 24)) {
 			List<ItemStack> items = new ArrayList<>();
 
 			items.addAll(block.getDrops(world, x, y, z, meta, 0));
@@ -64,8 +65,7 @@ public class LensMine extends Lens {
 					if(ConfigHandler.blockBreakParticles)
 						entity.worldObj.playAuxSFX(2001, x, y, z, Block.getIdFromBlock(block) + (meta << 12));
 
-					boolean offBounds = coords.posY < 0;
-					boolean doWarp = warp && !offBounds;
+					boolean doWarp = warp && burst.hasBurstSource() && CubicHeightBounds.isLoaded(world, coords.posX, coords.posY, coords.posZ);
 					int dropX = doWarp ? coords.posX : x;
 					int dropY = doWarp ? coords.posY : y;
 					int dropZ = doWarp ? coords.posZ : z;

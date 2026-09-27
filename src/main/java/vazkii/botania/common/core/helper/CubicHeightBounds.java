@@ -19,7 +19,16 @@ public final class CubicHeightBounds {
 		return vanillaResult;
 	}
 
+	public static boolean isLoaded(World world, int x, int y, int z) {
+		return !Loader.isModLoaded("cubicchunks") || CubicWorldBounds.isLoaded(world, x, y, z);
+	}
+
 	private static final class CubicWorldBounds {
+
+		private static boolean isLoaded(World world, int x, int y, int z) {
+			return !(world.getChunkProvider() instanceof ICubeProvider)
+					|| contains(world, y, y, false) && world.checkChunksExist(x, y, z, x, y, z);
+		}
 
 		private static boolean contains(World world, int minY, int maxY, boolean vanillaResult) {
 			if(world.getChunkProvider() instanceof ICubeProvider) {

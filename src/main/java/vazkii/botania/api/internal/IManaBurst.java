@@ -52,6 +52,15 @@ public interface IManaBurst {
 
 	public void setBurstSourceCoords(int x, int y, int z);
 
+	/** Legacy implementations use Y=-1 for no source; signed-height implementations must override this and clearBurstSource(). */
+	public default boolean hasBurstSource() {
+		return getBurstSourceChunkCoordinates().posY != -1;
+	}
+
+	public default void clearBurstSource() {
+		setBurstSourceCoords(0, -1, 0);
+	}
+
 	public ItemStack getSourceLens();
 
 	public void setSourceLens(ItemStack lens);

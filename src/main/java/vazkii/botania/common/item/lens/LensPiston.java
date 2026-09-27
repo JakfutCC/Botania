@@ -25,7 +25,7 @@ public class LensPiston extends Lens {
 	@Override
 	public boolean collideBurst(IManaBurst burst, EntityThrowable entity, MovingObjectPosition pos, boolean isManaBlock, boolean dead, ItemStack stack) {
 		ChunkCoordinates coords = burst.getBurstSourceChunkCoordinates();
-		if((coords.posX != pos.blockX || coords.posY != pos.blockY || coords.posZ != pos.blockZ) && !burst.isFake() && !isManaBlock && !entity.worldObj.isRemote) {
+		if((!burst.hasBurstSource() || coords.posX != pos.blockX || coords.posY != pos.blockY || coords.posZ != pos.blockZ) && !burst.isFake() && !isManaBlock && !entity.worldObj.isRemote) {
 			ForgeDirection dir = ForgeDirection.getOrientation(pos.sideHit).getOpposite();
 			int x = pos.blockX + dir.offsetX;
 			int y = pos.blockY + dir.offsetY;

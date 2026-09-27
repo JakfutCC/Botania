@@ -20,13 +20,14 @@ import vazkii.botania.api.internal.IManaBurst;
 import vazkii.botania.api.mana.IRedirectable;
 import vazkii.botania.api.mana.IThrottledPacket;
 import vazkii.botania.common.core.helper.Vector3;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 
 public class LensRedirect extends Lens {
 
 	@Override
 	public boolean collideBurst(IManaBurst burst, EntityThrowable entity, MovingObjectPosition pos, boolean isManaBlock, boolean dead, ItemStack stack) {
 		ChunkCoordinates coords = burst.getBurstSourceChunkCoordinates();
-		if(!entity.worldObj.isRemote && pos.entityHit == null && coords.posY != -1 && (pos.blockX != coords.posX || pos.blockY != coords.posY || pos.blockZ != coords.posZ)) {
+		if(!entity.worldObj.isRemote && pos.entityHit == null && burst.hasBurstSource() && CubicHeightBounds.isLoaded(entity.worldObj, coords.posX, coords.posY, coords.posZ) && (pos.blockX != coords.posX || pos.blockY != coords.posY || pos.blockZ != coords.posZ)) {
 			TileEntity tile = entity.worldObj.getTileEntity(pos.blockX, pos.blockY, pos.blockZ);
 			if(tile instanceof IRedirectable redir) {
 				if(!burst.isFake()) {

@@ -48,6 +48,7 @@ import vazkii.botania.api.mana.IThrottledPacket;
 import vazkii.botania.common.Botania;
 import vazkii.botania.common.core.handler.ConfigHandler;
 import vazkii.botania.common.core.helper.Vector3;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.item.equipment.bauble.ItemTinyPlanet;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -63,6 +64,7 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 	private static final String TAG_SPREADER_X = "spreaderX";
 	private static final String TAG_SPREADER_Y = "spreaderY";
 	private static final String TAG_SPREADER_Z = "spreaderZ";
+	private static final String TAG_HAS_SOURCE = "hasBurstSource";
 	private static final String TAG_GRAVITY = "gravity";
 	private static final String TAG_LENS_STACK = "lensStack";
 	private static final String TAG_LAST_MOTION_X = "lastMotionX";
@@ -76,6 +78,7 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 
 	final int dataWatcherEntries = 10;
 	final int dataWatcherStart = 32 - dataWatcherEntries;
+	private static final int SOURCE_PRESENT_WATCHER = 21;
 
 	List<String> alreadyCollidedAt = new ArrayList<>();
 
@@ -99,6 +102,8 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 
 			dataWatcher.setObjectWatched(j);
 		}
+		dataWatcher.addObject(SOURCE_PRESENT_WATCHER, (byte) 0);
+		clearBurstSource();
 	}
 
 	public EntityManaBurst(IManaSpreader spreader, boolean fake) {
@@ -123,7 +128,7 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 	public EntityManaBurst(EntityPlayer player) {
 		this(player.worldObj);
 
-		setBurstSourceCoords(0, -1, 0);
+		clearBurstSource();
 		setLocationAndAngles(player.posX, player.posY + player.getEyeHeight(), player.posZ, player.rotationYaw + 180, -player.rotationPitch);
 
 		posX -= MathHelper.cos((rotationYaw + 180) / 180.0F * (float) Math.PI) * 0.16F;
@@ -444,6 +449,7 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 		par1nbtTagCompound.setInteger(TAG_SPREADER_X, coords.posX);
 		par1nbtTagCompound.setInteger(TAG_SPREADER_Y, coords.posY);
 		par1nbtTagCompound.setInteger(TAG_SPREADER_Z, coords.posZ);
+		par1nbtTagCompound.setBoolean(TAG_HAS_SOURCE, hasBurstSource());
 
 		par1nbtTagCompound.setDouble(TAG_LAST_MOTION_X, motionX);
 		par1nbtTagCompound.setDouble(TAG_LAST_MOTION_Y, motionY);
@@ -479,7 +485,11 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 		int y = par1nbtTagCompound.getInteger(TAG_SPREADER_Y);
 		int z = par1nbtTagCompound.getInteger(TAG_SPREADER_Z);
 
-		setBurstSourceCoords(x, y, z);
+		boolean hasSource = par1nbtTagCompound.hasKey(TAG_HAS_SOURCE) ? par1nbtTagCompound.getBoolean(TAG_HAS_SOURCE)
+				: par1nbtTagCompound.hasKey(TAG_SPREADER_Y) && y != -1;
+		if(hasSource)
+			setBurstSourceCoords(x, y, z);
+		else clearBurstSource();
 
 		double lastMotionX = par1nbtTagCompound.getDouble(TAG_LAST_MOTION_X);
 		double lastMotionY = par1nbtTagCompound.getDouble(TAG_LAST_MOTION_Y);
@@ -591,10 +601,10 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 				return;
 
 			ChunkCoordinates coords = getBurstSourceChunkCoordinates();
-			if(tile != null && (tile.xCoord != coords.posX || tile.yCoord != coords.posY || tile.zCoord != coords.posZ))
+			if(tile != null && (!hasBurstSource() || tile.xCoord != coords.posX || tile.yCoord != coords.posY || tile.zCoord != coords.posZ))
 				collidedTile = tile;
 
-			if(tile == null || tile.xCoord != coords.posX || tile.yCoord != coords.posY || tile.zCoord != coords.posZ) {
+			if(!hasBurstSource() || tile == null || tile.xCoord != coords.posX || tile.yCoord != coords.posY || tile.zCoord != coords.posZ) {
 				if(!fake && !noParticles && (!worldObj.isRemote || tile instanceof IClientManaHandler) && tile != null && tile instanceof IManaReceiver && ((IManaReceiver) tile).canRecieveManaFromBursts())
 					onRecieverImpact((IManaReceiver) tile, tile.xCoord, tile.yCoord, tile.zCoord);
 
@@ -661,7 +671,9 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 	}
 
 	public TileEntity getShooter() {
+		if(!hasBurstSource()) return null;
 		ChunkCoordinates coords = getBurstSourceChunkCoordinates();
+		if(!CubicHeightBounds.isLoaded(worldObj, coords.posX, coords.posY, coords.posZ)) return null;
 		TileEntity tile = worldObj.getTileEntity(coords.posX, coords.posY, coords.posZ);
 		return tile;
 	}
@@ -761,6 +773,18 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 		dataWatcher.updateObject(coordsStart, x);
 		dataWatcher.updateObject(coordsStart + 1, y);
 		dataWatcher.updateObject(coordsStart + 2, z);
+		dataWatcher.updateObject(SOURCE_PRESENT_WATCHER, (byte) 1);
+	}
+
+	@Override
+	public boolean hasBurstSource() {
+		return dataWatcher.getWatchableObjectByte(SOURCE_PRESENT_WATCHER) != 0;
+	}
+
+	@Override
+	public void clearBurstSource() {
+		setBurstSourceCoords(0, -1, 0);
+		dataWatcher.updateObject(SOURCE_PRESENT_WATCHER, (byte) 0);
 	}
 
 	@Override
@@ -852,8 +876,7 @@ public class EntityManaBurst extends EntityThrowable implements IManaBurst {
 	}
 
 	public void setDeathTicksForFakeParticle() {
-		ChunkCoordinates coords = getBurstSourceChunkCoordinates();
-		TileEntity tile = worldObj.getTileEntity(coords.posX, coords.posY, coords.posZ);
+		TileEntity tile = getShooter();
 		if(tile != null && tile instanceof IManaSpreader)
 			((IManaSpreader) tile).setLastBurstDeathTick(getTicksExisted());
 	}
