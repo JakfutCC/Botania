@@ -28,6 +28,7 @@ import vazkii.botania.api.subtile.ISubTileContainer;
 import vazkii.botania.api.subtile.RadiusDescriptor;
 import vazkii.botania.api.subtile.SubTileEntity;
 import vazkii.botania.common.Botania;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.item.ItemTwigWand;
 import vazkii.botania.common.item.ModItems;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -48,13 +49,15 @@ public final class SubTileRadiusRenderHandler {
 		ItemStack stackHeld = mc.thePlayer.getCurrentEquippedItem();
 		if(stackHeld != null && stackHeld.getItem() == ModItems.twigWand && ItemTwigWand.getBindMode(stackHeld)) {
 			ChunkCoordinates coords = ItemTwigWand.getBoundTile(stackHeld);
-			if(coords.posY != -1) {
+			if(ItemTwigWand.hasBoundTile(stackHeld)) {
 				x = coords.posX;
 				y = coords.posY;
 				z = coords.posZ;
 			}
 		}
 
+		if(!CubicHeightBounds.isLoaded(mc.theWorld, x, y, z))
+			return;
 		TileEntity tile = mc.theWorld.getTileEntity(x, y, z);
 		if(tile == null || !(tile instanceof ISubTileContainer))
 			return;

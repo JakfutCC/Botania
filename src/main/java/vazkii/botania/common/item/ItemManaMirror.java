@@ -27,6 +27,7 @@ import vazkii.botania.api.mana.IManaTooltipDisplay;
 import vazkii.botania.api.wand.ICoordBoundItem;
 import vazkii.botania.client.core.helper.IconHelper;
 import vazkii.botania.common.block.tile.mana.TilePool;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.core.helper.ItemNBTHelper;
 import vazkii.botania.common.lib.LibItemNames;
 
@@ -41,6 +42,7 @@ public class ItemManaMirror extends ItemMod implements IManaItem, ICoordBoundIte
 	private static final String TAG_POS_Y = "posY";
 	private static final String TAG_POS_Z = "posZ";
 	private static final String TAG_DIM = "dim";
+	private static final String TAG_HAS_POOL = "hasPool";
 
 	private static final DummyPool fallbackPool = new DummyPool();
 
@@ -165,6 +167,7 @@ public class ItemManaMirror extends ItemMod implements IManaItem, ICoordBoundIte
 	}*/
 
 	public void bindPool(ItemStack stack, TileEntity pool) {
+		ItemNBTHelper.setBoolean(stack, TAG_HAS_POOL, pool != null);
 		ItemNBTHelper.setInt(stack, TAG_POS_X, pool == null ? 0 : pool.xCoord);
 		ItemNBTHelper.setInt(stack, TAG_POS_Y, pool == null ? -1 : pool.yCoord);
 		ItemNBTHelper.setInt(stack, TAG_POS_Z, pool == null ? 0 : pool.zCoord);
@@ -188,7 +191,7 @@ public class ItemManaMirror extends ItemMod implements IManaItem, ICoordBoundIte
 			return fallbackPool;
 
 		ChunkCoordinates coords = getPoolCoords(stack);
-		if(coords.posY == -1)
+		if(!ItemNBTHelper.getBoolean(stack, TAG_HAS_POOL, coords.posY != -1))
 			return null;
 
 		int dim = getDimension(stack);
@@ -200,6 +203,8 @@ public class ItemManaMirror extends ItemMod implements IManaItem, ICoordBoundIte
 			}
 
 		if(world != null) {
+			if(!CubicHeightBounds.isLoaded(world, coords.posX, coords.posY, coords.posZ))
+				return null;
 			TileEntity tile = world.getTileEntity(coords.posX, coords.posY, coords.posZ);
 			if(tile instanceof IManaPool)
 				return (IManaPool) tile;

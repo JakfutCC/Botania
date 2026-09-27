@@ -43,6 +43,7 @@ import vazkii.botania.common.block.BlockPistonRelay;
 import vazkii.botania.common.block.ModBlocks;
 import vazkii.botania.common.block.tile.TileEnchanter;
 import vazkii.botania.common.core.handler.ConfigHandler;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.core.helper.ItemNBTHelper;
 import vazkii.botania.common.core.helper.Vector3;
 import vazkii.botania.common.lib.LibItemNames;
@@ -56,6 +57,7 @@ public class ItemTwigWand extends Item16Colors implements ICoordBoundItem {
 	private static final String TAG_BOUND_TILE_X = "boundTileX";
 	private static final String TAG_BOUND_TILE_Y = "boundTileY";
 	private static final String TAG_BOUND_TILE_Z = "boundTileZ";
+	private static final String TAG_HAS_BOUND_TILE = "hasBoundTile";
 	private static final String TAG_BIND_MODE = "bindMode";
 
 	public ItemTwigWand() {
@@ -68,7 +70,9 @@ public class ItemTwigWand extends Item16Colors implements ICoordBoundItem {
 		Block block = world.getBlock(x, y, z);
 		ChunkCoordinates boundTile = getBoundTile(stack);
 
-		if(boundTile.posY != -1 && player.isSneaking() && (boundTile.posX != x || boundTile.posY != y || boundTile.posZ != z)) {
+		if(hasBoundTile(stack) && player.isSneaking() && (boundTile.posX != x || boundTile.posY != y || boundTile.posZ != z)) {
+			if(!CubicHeightBounds.isLoaded(world, boundTile.posX, boundTile.posY, boundTile.posZ))
+				return false;
 			TileEntity tile = world.getTileEntity(boundTile.posX, boundTile.posY, boundTile.posZ);
 			if(tile instanceof IWandBindable) {
 				if(((IWandBindable) tile).bindTo(player, stack, x, y, z, side)) {
@@ -77,11 +81,11 @@ public class ItemTwigWand extends Item16Colors implements ICoordBoundItem {
 					doParticleBeam(world, orig, end);
 
 					VanillaPacketDispatcher.dispatchTEToNearbyPlayers(world, boundTile.posX, boundTile.posY, boundTile.posZ);
-					setBoundTile(stack, 0, -1, 0);
+					clearBoundTile(stack);
 				}
 
 				return true;
-			} else setBoundTile(stack, 0, -1, 0);
+			} else clearBoundTile(stack);
 		} else if(player.isSneaking()) {
 			block.rotateBlock(world, x, y, z, ForgeDirection.getOrientation(side));
 			if(world.isRemote)
@@ -119,8 +123,8 @@ public class ItemTwigWand extends Item16Colors implements ICoordBoundItem {
 
 			boolean wanded = false;
 			if(getBindMode(stack) && bindable && player.isSneaking() && ((IWandBindable) tile).canSelect(player, stack, x, y, z, side)) {
-				if(boundTile.posX == x && boundTile.posY == y && boundTile.posZ == z)
-					setBoundTile(stack, 0, -1, 0);
+				if(hasBoundTile(stack) && boundTile.posX == x && boundTile.posY == y && boundTile.posZ == z)
+					clearBoundTile(stack);
 				else setBoundTile(stack, x, y, z);
 
 				if(world.isRemote)
@@ -176,10 +180,14 @@ public class ItemTwigWand extends Item16Colors implements ICoordBoundItem {
 
 	@Override
 	public void onUpdate(ItemStack stack, World world, Entity entity, int invSlot, boolean isHeld) {
+		if(!hasBoundTile(stack))
+			return;
 		ChunkCoordinates coords = getBoundTile(stack);
+		if(!CubicHeightBounds.isLoaded(world, coords.posX, coords.posY, coords.posZ))
+			return;
 		TileEntity tile = world.getTileEntity(coords.posX, coords.posY, coords.posZ);
 		if(!(tile instanceof IWandBindable))
-			setBoundTile(stack, 0, -1, 0);
+			clearBoundTile(stack);
 	}
 
 	@Override
@@ -269,9 +277,19 @@ public class ItemTwigWand extends Item16Colors implements ICoordBoundItem {
 	}
 
 	public static void setBoundTile(ItemStack stack, int x, int y, int z) {
+		ItemNBTHelper.setBoolean(stack, TAG_HAS_BOUND_TILE, true);
 		ItemNBTHelper.setInt(stack, TAG_BOUND_TILE_X, x);
 		ItemNBTHelper.setInt(stack, TAG_BOUND_TILE_Y, y);
 		ItemNBTHelper.setInt(stack, TAG_BOUND_TILE_Z, z);
+	}
+
+	public static boolean hasBoundTile(ItemStack stack) {
+		return ItemNBTHelper.getBoolean(stack, TAG_HAS_BOUND_TILE, ItemNBTHelper.getInt(stack, TAG_BOUND_TILE_Y, -1) != -1);
+	}
+
+	public static void clearBoundTile(ItemStack stack) {
+		setBoundTile(stack, 0, -1, 0);
+		ItemNBTHelper.setBoolean(stack, TAG_HAS_BOUND_TILE, false);
 	}
 
 	public static ChunkCoordinates getBoundTile(ItemStack stack) {
@@ -296,7 +314,7 @@ public class ItemTwigWand extends Item16Colors implements ICoordBoundItem {
 	@Override
 	public ChunkCoordinates getBinding(ItemStack stack) {
 		ChunkCoordinates bound = getBoundTile(stack);
-		if(bound.posY != -1)
+		if(hasBoundTile(stack))
 			return bound;
 
 		MovingObjectPosition pos = Minecraft.getMinecraft().objectMouseOver;

@@ -33,6 +33,7 @@ import vazkii.botania.api.item.IInWorldRenderable;
 import vazkii.botania.api.item.IWireframeCoordinateListProvider;
 import vazkii.botania.api.wand.ICoordBoundItem;
 import vazkii.botania.api.wand.IWireframeAABBProvider;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public final class BoundTileRenderer {
@@ -83,7 +84,7 @@ public final class BoundTileRenderer {
 
 				if(stackInSlot.getItem() instanceof IExtendedWireframeCoordinateListProvider) {
 					ChunkCoordinates coords = ((IExtendedWireframeCoordinateListProvider) stackInSlot.getItem()).getSourceWireframe(player, stackInSlot);
-					if(coords != null && coords.posY > -1)
+					if(coords != null)
 						renderBlockOutlineAt(coords, color, 5F);
 				}
 			}
@@ -106,12 +107,14 @@ public final class BoundTileRenderer {
 	}
 
 	private void renderBlockOutlineAt(ChunkCoordinates pos, int color, float thickness) {
+		World world = Minecraft.getMinecraft().theWorld;
+		if(!CubicHeightBounds.isLoaded(world, pos.posX, pos.posY, pos.posZ))
+			return;
 		GL11.glPushMatrix();
 		GL11.glTranslated(pos.posX - RenderManager.renderPosX, pos.posY - RenderManager.renderPosY, pos.posZ - RenderManager.renderPosZ + 1);
 		Color colorRGB = new Color(color);
 		GL11.glColor4ub((byte) colorRGB.getRed(), (byte) colorRGB.getGreen(), (byte) colorRGB.getBlue(), (byte) 255);
 
-		World world = Minecraft.getMinecraft().theWorld;
 		Block block = world.getBlock(pos.posX, pos.posY, pos.posZ);
 		drawWireframe : {
 			if(block != null) {

@@ -70,6 +70,7 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 	private static final String TAG_X_ORIGIN = "xOrigin";
 	private static final String TAG_Y_ORIGIN = "yOrigin";
 	private static final String TAG_Z_ORIGIN = "zOrigin";
+	private static final String TAG_HAS_ORIGIN = "hasOrigin";
 	private static final String TAG_MODE = "mode";
 	private static final String TAG_BREAKING_MODE = "breaking";
 	private static final String TAG_MIRROR_MODE = "mirror";
@@ -113,7 +114,7 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 		int cost = (int)(50*Math.sin(0.04* cursorCount)+cursorCount+120+20*Math.cos(0.2*cursorCount));
 
 		if (heldItemStack == null && event.action == Action.RIGHT_CLICK_BLOCK && player.isSneaking() && isRingEnabled(lokiRing)) {
-			if(originCoords.posY == -1 && lookPos != null) {
+			if(!hasOriginPos(lokiRing) && lookPos != null) {
 				setOriginPos(lokiRing, lookPos.blockX, lookPos.blockY, lookPos.blockZ);
 				if(player instanceof EntityPlayerMP)
 					syncLokiRing(player);
@@ -163,9 +164,9 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 			float oldPitch = player.rotationPitch;
 			float oldYaw = player.rotationYaw;
 
-			int masterOffsetX = originCoords.posY == -1 ? 0 :lookPos.blockX - originCoords.posX;
-			int masterOffsetY = originCoords.posY == -1 ? 0 :lookPos.blockY - originCoords.posY;
-			int masterOffsetZ = originCoords.posY == -1 ? 0 :lookPos.blockZ - originCoords.posZ;
+			int masterOffsetX = !hasOriginPos(lokiRing) ? 0 :lookPos.blockX - originCoords.posX;
+			int masterOffsetY = !hasOriginPos(lokiRing) ? 0 :lookPos.blockY - originCoords.posY;
+			int masterOffsetZ = !hasOriginPos(lokiRing) ? 0 :lookPos.blockZ - originCoords.posZ;
 
 			double playerOffsetX = player.posX - originCoords.posX;
 			double playerOffsetY = player.posY - originCoords.posY;
@@ -383,9 +384,9 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 
 		ChunkCoordinates originCoords = getOriginPos(lokiRing);
 
-		int masterOffsetX = originCoords.posY == -1 ? 0 :x - originCoords.posX;
-		int masterOffsetY = originCoords.posY == -1 ? 0 :y - originCoords.posY;
-		int masterOffsetZ = originCoords.posY == -1 ? 0 :z - originCoords.posZ;
+		int masterOffsetX = !hasOriginPos(lokiRing) ? 0 :x - originCoords.posX;
+		int masterOffsetY = !hasOriginPos(lokiRing) ? 0 :y - originCoords.posY;
+		int masterOffsetZ = !hasOriginPos(lokiRing) ? 0 :z - originCoords.posZ;
 
 		for(int i = 0; i < cursors.size(); i++) {
 			LokiCursor cursor = cursors.get(i);
@@ -460,7 +461,7 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 			ChunkCoordinates origin = getOriginPos(stack);
 			List<ChunkCoordinates> toDraw = new ArrayList<>();
 
-			if(origin.posY != -1) {
+			if(hasOriginPos(stack)) {
 				for(LokiCursor cursor : list) {
 					ChunkCoordinates coords = cursor.getCoordinates();
 					coords.posX += origin.posX;
@@ -484,7 +485,7 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 
 	@Override
 	public ChunkCoordinates getSourceWireframe(EntityPlayer player, ItemStack stack) {
-		return getLokiRing(player) == stack && isRingEnabled(stack) ? getOriginPos(stack) : null;
+		return getLokiRing(player) == stack && isRingEnabled(stack) && hasOriginPos(stack) ? getOriginPos(stack) : null;
 	}
 
 	public static void clearCursors(ItemStack stack){
@@ -493,6 +494,7 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 	
 	public static void clearMasterCursor(ItemStack stack){
 		setOriginPos(stack, 0, -1, 0);
+		ItemNBTHelper.setBoolean(stack, TAG_HAS_ORIGIN, false);
 	}
 
 	public static ItemStack getLokiRing(EntityPlayer player) {
@@ -525,9 +527,14 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 	}
 
 	private static void setOriginPos(ItemStack stack, int x, int y, int z) {
+		ItemNBTHelper.setBoolean(stack, TAG_HAS_ORIGIN, true);
 		ItemNBTHelper.setInt(stack, TAG_X_ORIGIN, x);
 		ItemNBTHelper.setInt(stack, TAG_Y_ORIGIN, y);
 		ItemNBTHelper.setInt(stack, TAG_Z_ORIGIN, z);
+	}
+
+	private static boolean hasOriginPos(ItemStack stack) {
+		return ItemNBTHelper.getBoolean(stack, TAG_HAS_ORIGIN, ItemNBTHelper.getInt(stack, TAG_Y_ORIGIN, -1) != -1);
 	}
 
 	private static List<LokiCursor> getCursorList(ItemStack stack) {
@@ -597,7 +604,7 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 				continue;
 			}
 			ChunkCoordinates pos = cursor.getCoordinates();
-			if(origin.posY != -1){
+			if(hasOriginPos(stack)){
 
 				pos.posX += origin.posX;
 				pos.posY += origin.posY;
@@ -698,4 +705,3 @@ public class ItemLokiRing extends ItemRelicBauble implements IExtendedWireframeC
 	}
 
 }
-
