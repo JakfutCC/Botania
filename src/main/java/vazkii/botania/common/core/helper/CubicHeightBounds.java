@@ -23,7 +23,15 @@ public final class CubicHeightBounds {
 		return !Loader.isModLoaded("cubicchunks") || CubicWorldBounds.isLoaded(world, x, y, z);
 	}
 
+	public static boolean isCubicWorld(World world) {
+		return Loader.isModLoaded("cubicchunks") && CubicWorldBounds.isCubicWorld(world);
+	}
+
 	private static final class CubicWorldBounds {
+
+		private static boolean isCubicWorld(World world) {
+			return world.getChunkProvider() instanceof ICubeProvider;
+		}
 
 		private static boolean isLoaded(World world, int x, int y, int z) {
 			return !(world.getChunkProvider() instanceof ICubeProvider)

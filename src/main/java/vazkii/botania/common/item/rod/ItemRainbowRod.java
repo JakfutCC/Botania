@@ -31,6 +31,7 @@ import vazkii.botania.client.lib.LibResources;
 import vazkii.botania.common.Botania;
 import vazkii.botania.common.block.ModBlocks;
 import vazkii.botania.common.block.tile.TileBifrost;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.core.helper.Vector3;
 import vazkii.botania.common.item.ItemMod;
 import vazkii.botania.common.lib.LibItemNames;
@@ -68,15 +69,28 @@ public class ItemRainbowRod extends ItemMod implements IManaUsingItem, IAvatarWi
 			int maxlen = prof ? 160 : 100;
 			int time = prof ? (int) (TIME * 1.6) : TIME;
 
-			while(count < maxlen && (int) lx == (int) x && (int) ly == (int) y && (int) lz == (int) z || count < 4 || world.getBlock((int) x, (int) y, (int) z).isAir(world, (int) x, (int) y, (int) z) || world.getBlock((int) x, (int) y, (int) z) == place) {
-				if(y >= 256 || y <= 0)
+			while(count < maxlen) {
+				int bx = MathHelper.floor_double(x);
+				int by = MathHelper.floor_double(y);
+				int bz = MathHelper.floor_double(z);
+				if(!CubicHeightBounds.contains(world, by, by, y > 0 && y < 256))
+					break;
+				boolean loaded = true;
+				for(int i = -2; i < 1; i++)
+					for(int j = -2; j < 1; j++)
+						loaded &= CubicHeightBounds.isLoaded(world, bx + i, by, bz + j);
+				if(!loaded)
+					break;
+				Block center = world.getBlock(bx, by, bz);
+				if(count >= 4 && (MathHelper.floor_double(lx) != bx || MathHelper.floor_double(ly) != by || MathHelper.floor_double(lz) != bz)
+						&& !center.isAir(world, bx, by, bz) && center != place)
 					break;
 
 				for(int i = -2; i < 1; i++)
 					for(int j = -2; j < 1; j++)
-						if(world.getBlock((int) x + i, (int) y, (int) z + j).isAir(world, (int) x + i, (int) y, (int) z + j) || world.getBlock((int) x + i, (int) y, (int) z + j) == place) {
-							world.setBlock((int) x + i, (int) y, (int) z + j, place);
-							TileBifrost tile = (TileBifrost) world.getTileEntity((int) x + i, (int) y, (int) z + j);
+						if(world.getBlock(bx + i, by, bz + j).isAir(world, bx + i, by, bz + j) || world.getBlock(bx + i, by, bz + j) == place) {
+							world.setBlock(bx + i, by, bz + j, place);
+							TileBifrost tile = (TileBifrost) world.getTileEntity(bx + i, by, bz + j);
 							if(tile != null) {
 								for(int k = 0; k < 4; k++)
 									Botania.proxy.sparkleFX(world, tile.xCoord + Math.random(), tile.yCoord + Math.random(), tile.zCoord + Math.random(), (float) Math.random(), (float) Math.random(), (float) Math.random(), 0.45F + 0.2F * (float) Math.random(), 6);

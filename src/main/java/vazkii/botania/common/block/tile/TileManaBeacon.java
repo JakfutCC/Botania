@@ -13,6 +13,7 @@ package vazkii.botania.common.block.tile;
 import net.minecraft.entity.passive.EntitySheep;
 import net.minecraftforge.common.util.ForgeDirection;
 import vazkii.botania.common.Botania;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 
 public class TileManaBeacon extends TileMod {
 
@@ -27,12 +28,14 @@ public class TileManaBeacon extends TileMod {
 
 		if(!redstone) {
 			float[] color = EntitySheep.fleeceColorTable[worldObj.getBlockMetadata(xCoord, yCoord, zCoord)];
+			double ceiling = CubicHeightBounds.isCubicWorld(worldObj) ? yCoord + 256D : 256D;
+			float speed = 10F * (float) Math.sqrt(256D / (ceiling - yCoord));
 
 			Botania.proxy.setWispFXDistanceLimit(false);
-			Botania.proxy.wispFX(worldObj, xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, color[0], color[1], color[2], (float) Math.random() * 5 + 1F, (float) (Math.random() - 0.5F), 10F * (float) Math.sqrt(256F / (256F - yCoord)), (float) (Math.random() - 0.5F));
+			Botania.proxy.wispFX(worldObj, xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, color[0], color[1], color[2], (float) Math.random() * 5 + 1F, (float) (Math.random() - 0.5F), speed, (float) (Math.random() - 0.5F));
 
 			for(int i = 0; i < 2; i++)
-				Botania.proxy.wispFX(worldObj, xCoord + 0.5, 256, zCoord + 0.5, color[0], color[1], color[2], (float) Math.random() * 15 + 8F, (float) (Math.random() - 0.5F) * 8F, 0F, (float) (Math.random() - 0.5F) * 8F);
+				Botania.proxy.wispFX(worldObj, xCoord + 0.5, ceiling, zCoord + 0.5, color[0], color[1], color[2], (float) Math.random() * 15 + 8F, (float) (Math.random() - 0.5F) * 8F, 0F, (float) (Math.random() - 0.5F) * 8F);
 			Botania.proxy.setWispFXDistanceLimit(true);
 		}
 	}

@@ -17,6 +17,7 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 import vazkii.botania.common.block.ModBlocks;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 
 public class EntityVineBall extends EntityThrowable {
 
@@ -45,11 +46,17 @@ public class EntityVineBall extends EntityThrowable {
 				int x = var1.blockX + dir.offsetX;
 				int y = var1.blockY + dir.offsetY;
 				int z = var1.blockZ + dir.offsetZ;
-				while(y > 0) {
+				// A cubic world has no finite column bottom to bound this effect.
+				for(int length = 0; length < 256 && CubicHeightBounds.contains(worldObj, y, y, y > 0); length++) {
+					if(!CubicHeightBounds.isLoaded(worldObj, x, y, z))
+						break;
 					Block block = worldObj.getBlock(x, y, z);
 					if(block.isAir(worldObj, x, y, z)) {
-						worldObj.setBlock(x, y, z, ModBlocks.solidVines, metaPlace[meta - 2], 1 | 2);
+						if(!worldObj.setBlock(x, y, z, ModBlocks.solidVines, metaPlace[meta - 2], 1 | 2))
+							break;
 						worldObj.playAuxSFX(2001, x, y, z, Block.getIdFromBlock(ModBlocks.solidVines) + (metaPlace[meta - 2] << 12));
+						if(y == Integer.MIN_VALUE)
+							break;
 						y--;
 					} else break;
 				}
