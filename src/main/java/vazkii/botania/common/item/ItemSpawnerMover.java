@@ -25,6 +25,7 @@ import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import vazkii.botania.api.internal.VanillaPacketDispatcher;
 import vazkii.botania.client.core.helper.IconHelper;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.Botania;
 import vazkii.botania.common.achievement.ModAchievements;
 import vazkii.botania.common.lib.LibItemNames;
@@ -138,9 +139,11 @@ public class ItemSpawnerMover extends ItemMod {
 		else if(block != Blocks.vine && block != Blocks.tallgrass && block != Blocks.deadbush && !block.isReplaceable(world, x, y, z)) {
 			switch (side) {
 			case 0:
+				if(y == Integer.MIN_VALUE) return false;
 				--y;
 				break;
 			case 1:
+				if(y == Integer.MAX_VALUE) return false;
 				++y;
 				break;
 			case 2:
@@ -162,7 +165,7 @@ public class ItemSpawnerMover extends ItemMod {
 			return false;
 		else if(!player.canPlayerEdit(x, y, z, side, itemstack))
 			return false;
-		else if(y == 255 && block.getMaterial().isSolid())
+		else if(!CubicHeightBounds.contains(world, y, y, y != 255 || !block.getMaterial().isSolid()))
 			return false;
 		else if(world.canPlaceEntityOnSide(Blocks.mob_spawner, x, y, z, false, side, player, itemstack)) {
 			int meta = block.onBlockPlaced(world, x, y, z, side, xOffset, yOffset, zOffset, 0);

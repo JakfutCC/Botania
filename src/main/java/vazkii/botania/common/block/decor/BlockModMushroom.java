@@ -35,6 +35,7 @@ import vazkii.botania.client.core.helper.IconHelper;
 import vazkii.botania.common.Botania;
 import vazkii.botania.common.core.BotaniaCreativeTab;
 import vazkii.botania.common.core.handler.ConfigHandler;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.integration.coloredlights.ColoredLightHelper;
 import vazkii.botania.common.item.block.ItemBlockWithMetadataAndName;
 import vazkii.botania.common.lexicon.LexiconData;
@@ -67,7 +68,7 @@ public class BlockModMushroom extends BlockMushroom implements IInfusionStabilis
 
 	@Override
 	public boolean canBlockStay(World world, int x, int y, int z) {
-		if(y >= 0 && y < 256) {
+		if(CubicHeightBounds.contains(world, (long) y - 1, y, y >= 0 && y < 256)) {
 			Block block = world.getBlock(x, y - 1, z);
 			return block == Blocks.mycelium || block == Blocks.dirt && world.getBlockMetadata(x, y - 1, z) == 2 || block.canSustainPlant(world, x, y - 1, z, ForgeDirection.UP, this);
 		}

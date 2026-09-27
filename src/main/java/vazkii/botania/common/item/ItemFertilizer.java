@@ -19,6 +19,7 @@ import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.world.World;
 import vazkii.botania.common.Botania;
 import vazkii.botania.common.block.ModBlocks;
+import vazkii.botania.common.core.helper.CubicHeightBounds;
 import vazkii.botania.common.lib.LibItemNames;
 
 public class ItemFertilizer extends ItemMod {
@@ -38,9 +39,12 @@ public class ItemFertilizer extends ItemMod {
 				for(int j = -range - 1; j < range; j++) {
 					for(int k = 2; k >= -2; k--) {
 						int tryX = x + i + 1;
-						int tryY = y + k + 1;
+						long targetY = (long) y + k + 1;
+						if(!CubicHeightBounds.contains(world, targetY - 1, targetY, !world.provider.hasNoSky || targetY < 255))
+							continue;
+						int tryY = (int) targetY;
 						int tryZ = z + j + 1;
-						if(world.isAirBlock(tryX, tryY, tryZ) && (!world.provider.hasNoSky || tryY < 255) && ModBlocks.flower.canBlockStay(world, tryX, tryY, tryZ))
+						if(world.isAirBlock(tryX, tryY, tryZ) && ModBlocks.flower.canBlockStay(world, tryX, tryY, tryZ))
 							validCoords.add(new ChunkCoordinates(tryX, tryY, tryZ));
 					}
 				}
